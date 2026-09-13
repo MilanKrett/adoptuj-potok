@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adoptuj potok — mapa adoptovaných potokov Banskobystrického kraja</title>
+<meta name="description" content="Adoptuj potok: škola, detský domov, centrum voľného času, skautský oddiel alebo obec si adoptuje úsek potoka, čistí ho, meria vodu a nahlasuje čierne skládky. Všetko na verejnej mape kraja.">
+<link rel="icon" type="image/png" href="logo/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<style>
+:root{
+  --teal:#1E7A8C; --teal-d:#155A68; --teal-l:#E3F1F4; --green:#7CC47F; --green-d:#3E8E52;
+  --ink:#1B2A32; --muted:#5F6F80; --bg:#F5F9FA; --card:#fff; --line:#D9E4E8; --warn:#E0A100;
+  --r:14px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg);line-height:1.55}
+img{max-width:100%;display:block}
+a{color:var(--teal-d)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+h1,h2,h3{line-height:1.15;margin:0 0 .5em}
+h2{font-size:clamp(1.5rem,3vw,2.1rem);font-weight:800}
+h3{font-size:1.15rem;font-weight:700}
+p{margin:0 0 1em}
+.muted{color:var(--muted)}
+.lead{font-size:1.1rem}
+section{padding:64px 0}
+section.alt{background:#fff}
+.eyebrow{display:inline-block;font-size:.8rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-bottom:8px}
+
+/* header */
+header{position:sticky;top:0;z-index:1000;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;height:66px;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;text-decoration:none;color:var(--ink);font-size:1.1rem}
+.brand img{width:38px;height:38px}
+.nav ul{list-style:none;margin:0;padding:0;display:flex;gap:20px}
+.nav ul a{text-decoration:none;color:var(--ink);font-weight:600;font-size:.95rem}
+.nav ul a:hover{color:var(--teal)}
+.btn{display:inline-block;background:var(--teal);color:#fff;font-weight:700;padding:12px 22px;border-radius:999px;text-decoration:none;border:0;cursor:pointer;font-family:inherit;font-size:1rem;transition:.15s}
+.btn:hover{background:var(--teal-d)}
+.btn.ghost{background:#fff;color:var(--teal-d);border:2px solid var(--teal)}
+.btn.ghost:hover{background:var(--teal-l)}
+.btn.sm{padding:9px 16px;font-size:.9rem}
+@media(max-width:820px){.nav ul{display:none}}
+
+/* hero */
+.hero{background:linear-gradient(160deg,var(--teal-d) 0%,var(--teal) 55%,#2E9AA6 100%);color:#fff;padding:72px 0 56px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;inset:auto -10% -40% -10%;height:60%;background:radial-gradient(ellipse at center,rgba(255,255,255,.14),transparent 60%);pointer-events:none}
+.hero .wrap{display:grid;grid-template-columns:1.2fr 1fr;gap:40px;align-items:center;position:relative}
+.hero h1{font-size:clamp(2rem,4.6vw,3.3rem);font-weight:800;margin-bottom:16px}
+.hero p{font-size:1.15rem;opacity:.95;max-width:560px}
+.hero .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px}
+.hero .btn{background:#fff;color:var(--teal-d)}
+.hero .btn:hover{background:var(--teal-l)}
+.hero .btn.ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.7)}
+.hero .btn.ghost:hover{background:rgba(255,255,255,.12)}
+.hero-card{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:22px}
+.hero-card h3{color:#fff;font-size:1rem;opacity:.9;margin-bottom:12px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{background:rgba(255,255,255,.14);border-radius:12px;padding:14px}
+.stat b{display:block;font-size:1.8rem;font-weight:800;line-height:1.1}
+.stat span{font-size:.85rem;opacity:.9}
+.hero .note{font-size:.85rem;opacity:.85;margin:12px 0 0}
+@media(max-width:820px){.hero .wrap{grid-template-columns:1fr}}
+
+/* map */
+#map{height:520px;border-radius:var(--r);border:1px solid var(--line);z-index:1}
+.map-grid{display:grid;grid-template-columns:1fr 340px;gap:20px}
+@media(max-width:900px){.map-grid{grid-template-columns:1fr}#map{height:420px}}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin:12px 0 0;font-size:.9rem}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:26px;height:5px;border-radius:3px;display:inline-block}
+.side{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:18px;max-height:520px;overflow:auto}
+.sec-item{padding:12px;border-radius:10px;border:1px solid var(--line);margin-bottom:10px;cursor:pointer;transition:.15s}
+.sec-item:hover,.sec-item.active{border-color:var(--teal);background:var(--teal-l)}
+.sec-item b{display:block}
+.sec-item small{color:var(--muted)}
+.tag{display:inline-block;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:999px;margin-top:6px}
+.tag.pilot{background:#DCF2DE;color:var(--green-d)}
+.tag.free{background:#FFF1CC;color:#8A6400}
+.tag.plan{background:#E6ECF0;color:#4A5B69}
+.leaflet-popup-content{font-family:inherit;font-size:.92rem;line-height:1.45;margin:14px 16px}
+.leaflet-popup-content b.t{font-size:1.02rem;display:block;margin-bottom:6px;color:var(--teal-d)}
+.leaflet-popup-content table{border-collapse:collapse;width:100%;margin:6px 0}
+.leaflet-popup-content td{padding:3px 0;border-bottom:1px solid #EEF2F4;vertical-align:top}
+.leaflet-popup-content td:first-child{color:var(--muted);padding-right:10px;white-space:nowrap}
+
+/* cards */
+.grid{display:grid;gap:18px}
+.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:900px){.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.g4,.g3,.g2{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px}
+.card .num{width:38px;height:38px;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.card h3{margin-bottom:6px}
+.card p:last-child{margin-bottom:0}
+
+/* tables */
+table.t{width:100%;border-collapse:collapse;background:#fff;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);font-size:.95rem}
+table.t th{background:var(--teal);color:#fff;text-align:left;padding:10px 12px;font-weight:700}
+table.t td{padding:10px 12px;border-top:1px solid var(--line);vertical-align:top}
+table.t tr:nth-child(even) td{background:#F8FBFC}
+.tbl-wrap{overflow-x:auto}
+
+/* photos */
+.photos{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:900px){.photos{grid-template-columns:repeat(2,1fr)}}
+.ph{position:relative;aspect-ratio:4/3;border-radius:var(--r);overflow:hidden;background:#fff;border:1px solid var(--line)}
+.ph img{width:100%;height:100%;object-fit:cover}
+.ph figcaption{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(transparent,rgba(0,0,0,.65));color:#fff;padding:26px 12px 10px;font-size:.85rem;font-weight:600}
+.ph.empty{border:2px dashed #B7CBD2;background:var(--teal-l)}
+.ph.empty img{display:none}
+.ph.empty figcaption{position:static;background:none;color:var(--teal-d);padding:0;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px}
+.ph.empty figcaption::before{content:"📷";font-size:1.8rem}
+.ph.empty small{font-weight:500;color:var(--muted)}
+
+/* leaderboard */
+.board{background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.board .row{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--line)}
+.board .row:first-child{border-top:0;background:var(--teal);color:#fff;font-weight:700}
+.board .rank{font-weight:800;font-size:1.2rem;color:var(--teal)}
+.board .row:first-child .rank{color:#fff}
+.board .pts{font-weight:800}
+.board small{color:var(--muted);display:block}
+.board .row:first-child small{color:#E3F1F4}
+.demo{display:inline-block;background:#FFF1CC;color:#8A6400;font-size:.78rem;font-weight:700;padding:4px 10px;border-radius:999px;margin-left:8px;vertical-align:middle}
+
+/* forms */
+form{display:grid;gap:12px}
+label{font-weight:600;font-size:.92rem}
+input,select,textarea{width:100%;padding:11px 12px;border:1px solid #B7CBD2;border-radius:10px;font:inherit;background:#fff}
+textarea{min-height:90px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.two{grid-template-columns:1fr}}
+
+/* impact */
+.impact{background:var(--teal-d);color:#fff}
+.impact .card{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18);color:#fff}
+.impact .card b{font-size:1.9rem;display:block;font-weight:800}
+.impact .card p{opacity:.9}
+.impact a{color:#fff}
+
+/* footer */
+footer{padding:36px 0;border-top:1px solid var(--line);font-size:.9rem;color:var(--muted)}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center}
+.pill{display:inline-block;background:var(--teal-l);color:var(--teal-d);font-weight:700;padding:5px 12px;border-radius:999px;font-size:.85rem}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#"><img src="logo/logo-mark.png" alt="Adoptuj potok">Adoptuj potok</a>
+    <ul>
+      <li><a href="#mapa">Mapa</a></li>
+      <li><a href="#ako">Ako to funguje</a></li>
+      <li><a href="#skoly">Pre školy</a></li>
+      <li><a href="#sutaz">Potok mesiaca</a></li>
+      <li><a href="#pilot">Pilot</a></li>
+      <li><a href="#o-mne">O mne</a></li>
+    </ul>
+    <a class="btn sm" href="#adoptuj">Adoptovať úsek</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <span class="pill" style="background:rgba(255,255,255,.18);color:#fff">Banskobystrický kraj · pilot 2026/2027</span>
+      <h1 style="margin-top:14px">Každý potok si zaslúži niekoho, kto sa oň stará.</h1>
+      <p>Škola, detský domov, centrum voľného času, skautský oddiel alebo obec si adoptuje konkrétny úsek potoka. Pravidelne ho čistí, jednoduchými prúžkami meria kvalitu vody a nahlasuje čierne skládky. Všetko sa zapisuje do verejnej mapy kraja.</p>
+      <div class="cta">
+        <a class="btn" href="#mapa">Pozrieť mapu</a>
+        <a class="btn ghost" href="#adoptuj">Adoptovať úsek</a>
+      </div>
+    </div>
+    <div class="hero-card">
+      <h3>Stav mapy k dnešnému dňu</h3>
+      <div class="stats">
+        <div class="stat"><b id="s-sections">0</b><span>úsekov na mape</span></div>
+        <div class="stat"><b id="s-km">0 km</b><span>dĺžka tokov na mape</span></div>
+        <div class="stat"><b id="s-adopted">0</b><span>adoptovaných úsekov</span></div>
+        <div class="stat"><b id="s-kg">0 kg</b><span>vyzbieraného odpadu</span></div>
+      </div>
+      <p class="note">Čísla sa počítajú priamo z údajov na mape. Kilogramy a hodnoty vody pribudnú po prvom čistení Rimavy v septembri 2026.</p>
+    </div>
+  </div>
+</section>
+
+<section id="mapa">
+  <div class="wrap">
+    <span class="eyebrow">Verejná mapa kraja</span>
+    <h2>Mapa adoptovaných potokov</h2>
+    <p class="lead muted">Kliknite na úsek. Pri každom vidíte, kto sa oň stará, koľko odpadu sa vyzbieralo, aké hodnoty má voda a či sa tam nahlásila skládka. Úseky sú vykreslené na skutočnom toku podľa údajov OpenStreetMap.</p>
+    <div class="map-grid">
+      <div>
+        <div id="map"></div>
+        <div class="legend">
+          <span><i style="background:#3E8E52"></i> adoptovaný úsek (pilot)</span>
+          <span><i style="background:#E0A100"></i> voľný úsek — čaká na adopciu</span>
+          <span><i style="background:#7A8B99"></i> plánovaný úsek</span>
+        </div>
+      </div>
+      <aside class="side" id="seclist"></aside>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="ako">
+  <div class="wrap">
+    <span class="eyebrow">Ako to funguje</span>
+    <h2>Štyri kroky od nápadu k čistému potoku</h2>
+    <div class="grid g4">
+      <div class="card"><div class="num">1</div><h3>Vyberiete si úsek</h3><p>Na mape si škola, oddiel alebo obec vyberie voľný úsek potoka dlhý 1 – 3 km, ideálne v pešej vzdialenosti. Adopcia je bezplatná a trvá jeden školský rok.</p></div>
+      <div class="card"><div class="num">2</div><h3>Dostanete balíček</h3><p>Štartovací balíček: testovacie prúžky na vodu, rukavice, vrecia, metodika hodiny v teréne, karta úseku a tabuľka „Tento úsek adoptovala…“.</p></div>
+      <div class="card"><div class="num">3</div><h3>Čistíte a meriate</h3><p>Aspoň raz za dva mesiace vyčistíte úsek, odvážite vrecia, zmeriate vodu (pH, dusičnany, dusitany, tvrdosť) a odfotíte stav. Skládku nahlásite jedným formulárom.</p></div>
+      <div class="card"><div class="num">4</div><h3>Zapisujete do mapy</h3><p>Výsledky sa objavia na verejnej mape kraja. Skupina s najväčším pokrokom vyhráva Potok mesiaca; nahlásené skládky idú obci a okresnému úradu.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="skoly">
+  <div class="wrap">
+    <span class="eyebrow">Pre školy a detské zariadenia</span>
+    <h2>Hotová hodina v teréne — 45 minút pri potoku</h2>
+    <p class="lead muted">Jadrom projektu sú základné a stredné školy, detské domovy, centrá voľného času, školské kluby a komunitné centrá. Každé zariadenie dostane program, ktorý učiteľ alebo vychovávateľ zvládne bez prípravy.</p>
+    <div class="grid g2">
+      <div>
+        <div class="tbl-wrap">
+        <table class="t">
+          <tr><th style="width:80px">Čas</th><th>Čo robíme</th><th>Čo sa deti naučia</th></tr>
+          <tr><td>0 – 5 min</td><td>Príchod na úsek, bezpečnosť, rozdelenie úloh (merači, zberači, fotograf, zapisovateľ).</td><td>Práca v tíme, pravidlá pri vode.</td></tr>
+          <tr><td>5 – 15 min</td><td>Meranie vody testovacími prúžkami: pH, dusičnany, dusitany, tvrdosť. Zápis do karty úseku.</td><td>Čo znamenajú hodnoty, odkiaľ sa berú dusičnany (polia, kanalizácia).</td></tr>
+          <tr><td>15 – 35 min</td><td>Čistenie brehov a koryta, triedenie odpadu do vriec (plast, sklo, kov, ostatné), váženie.</td><td>Aký odpad končí v potoku a ako dlho sa rozkladá.</td></tr>
+          <tr><td>35 – 42 min</td><td>Pozorovanie života: larvy podeniek, kôrovce, rastliny — jednoduchá karta bioindikátorov.</td><td>Živý potok = čistý potok; bioindikátory.</td></tr>
+          <tr><td>42 – 45 min</td><td>Fotka pred/po, zápis výsledkov do mapy z mobilu.</td><td>Vidieť výsledok vlastnej práce.</td></tr>
+        </table>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <h3>Štartovací balíček — 35 € na skupinu</h3>
+          <div class="tbl-wrap">
+          <table class="t">
+            <tr><th>Položka</th><th style="text-align:right">Cena</th></tr>
+            <tr><td>Testovacie prúžky na vodu (50 ks, 5 parametrov)</td><td style="text-align:right">12 €</td></tr>
+            <tr><td>Pracovné rukavice, 20 párov</td><td style="text-align:right">6 €</td></tr>
+            <tr><td>Vrecia na triedený odpad, 30 ks</td><td style="text-align:right">4 €</td></tr>
+            <tr><td>Metodika, karta úseku, karta bioindikátorov (tlač)</td><td style="text-align:right">5 €</td></tr>
+            <tr><td>Tabuľka „Tento úsek adoptovala …“ (plast, A4)</td><td style="text-align:right">8 €</td></tr>
+            <tr><td><b>Spolu</b></td><td style="text-align:right"><b>35 €</b></td></tr>
+          </table>
+          </div>
+          <p class="muted" style="margin-top:12px;font-size:.9rem">Prvých 30 balíčkov v pilotnom roku financujem z výhry v súťaži a z grantu Banskobystrického samosprávneho kraja. Pre školy je adopcia bezplatná.</p>
+        </div>
+        <div class="card" style="margin-top:18px">
+          <h3>Prečo aj detské domovy a komunitné centrá</h3>
+          <p>Pre deti zo znevýhodneného prostredia je to zmysluplná aktivita s viditeľným výsledkom: ich meno je na mape, ich fotka pri vyčistenom potoku. Pocit, že môžu niečo zmeniť, je pre ne dôležitejší ako pre kohokoľvek iného.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="sutaz">
+  <div class="wrap">
+    <span class="eyebrow">Motivácia</span>
+    <h2>Potok mesiaca a Potok roka</h2>
+    <p class="lead muted">Každý mesiac vyhráva skupina s najväčším pokrokom. Získa ocenenie, zvýraznenie na mape, zmienku v regionálnych médiách a malú odmenu pre tím (napr. výlet alebo vybavenie do 100 €). Na konci školského roka sa vyhlási Potok roka a najaktívnejšia škola kraja.</p>
+    <div class="grid g2">
+      <div>
+        <h3>Ako sa počítajú body</h3>
+        <div class="tbl-wrap">
+        <table class="t">
+          <tr><th>Za čo</th><th style="text-align:right">Body</th></tr>
+          <tr><td>Každý kilogram vyzbieraného odpadu (max. 40 b. mesačne)</td><td style="text-align:right">1</td></tr>
+          <tr><td>Nahlásená skládka, ktorú obec alebo úrad odstránil</td><td style="text-align:right">15</td></tr>
+          <tr><td>Zlepšenie hodnôt vody oproti minulému meraniu</td><td style="text-align:right">10</td></tr>
+          <tr><td>Každé zapísané meranie vody s fotkou</td><td style="text-align:right">5</td></tr>
+          <tr><td>Každé zapojené dieťa (max. 30 b. mesačne)</td><td style="text-align:right">1</td></tr>
+        </table>
+        </div>
+      </div>
+      <div>
+        <h3>Rebríček <span class="demo">ukážka bodovania — nie sú to skutočné údaje</span></h3>
+        <div class="board">
+          <div class="row"><span class="rank">#</span><span>Skupina · úsek</span><span class="pts">Body</span></div>
+          <div class="row"><span class="rank">1</span><span>ZŠ — úsek Rimava sever<small>38 kg · 1 odstránená skládka · 24 detí</small></span><span class="pts">92</span></div>
+          <div class="row"><span class="rank">2</span><span>CVČ — úsek Krivánsky potok<small>31 kg · 2 merania · 18 detí</small></span><span class="pts">69</span></div>
+          <div class="row"><span class="rank">3</span><span>Skautský oddiel — úsek Muráň<small>22 kg · zlepšené hodnoty vody · 12 detí</small></span><span class="pts">54</span></div>
+          <div class="row"><span class="rank">4</span><span>Detský domov — úsek Bystrica<small>15 kg · 1 meranie · 9 detí</small></span><span class="pts">29</span></div>
+        </div>
+        <p class="muted" style="font-size:.9rem;margin-top:10px">Takto bude rebríček vyzerať po prvom mesiaci pilotu. Skutočné body sa začnú počítať od októbra 2026.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pilot">
+  <div class="wrap">
+    <span class="eyebrow">Pilot</span>
+    <h2>Začíname na Rimave v Rimavskej Sobote</h2>
+    <p class="lead muted">Prvý úsek (RS-01, 1,5 km cez centrum mesta) adoptuje moja škola — Obchodná akadémia v Rimavskej Sobote. Prvé čistenie a meranie robíme v septembri 2026. Fotky a čísla z neho doplním sem aj na mapu hneď po akcii.</p>
+    <div class="photos">
+      <figure class="ph"><img src="foto/1.jpg" alt="Úsek Rimavy pred čistením" onerror="this.parentElement.classList.add('empty')"><figcaption>Pred čistením<small>fotku doplním po akcii</small></figcaption></figure>
+      <figure class="ph"><img src="foto/2.jpg" alt="Čistenie brehov Rimavy" onerror="this.parentElement.classList.add('empty')"><figcaption>Čistenie brehov<small>fotku doplním po akcii</small></figcaption></figure>
+      <figure class="ph"><img src="foto/3.jpg" alt="Meranie vody testovacími prúžkami" onerror="this.parentElement.classList.add('empty')"><figcaption>Meranie vody<small>fotku doplním po akcii</small></figcaption></figure>
+      <figure class="ph"><img src="foto/4.jpg" alt="Vyzbieraný odpad po čistení" onerror="this.parentElement.classList.add('empty')"><figcaption>Výsledok — vrecia po čistení<small>fotku doplním po akcii</small></figcaption></figure>
+    </div>
+    <div class="grid g3" style="margin-top:28px">
+      <div class="card"><h3>September – október 2026</h3><p>Pilotné čistenie Rimavy (RS-01), spustenie mapy, oslovenie škôl a zariadení v okresoch Rimavská Sobota, Lučenec, Revúca a Banská Bystrica. Cieľ: 8 adoptovaných úsekov.</p></div>
+      <div class="card"><h3>November 2026 – marec 2027</h3><p>Prvé kolá Potoka mesiaca, dohoda s obcami a okresnými úradmi životného prostredia o preberaní nahlásených skládok. Cieľ: 18 úsekov.</p></div>
+      <div class="card"><h3>Apríl – jún 2027</h3><p>Jarné čistenie, vyhlásenie Potoka roka a najaktívnejšej školy kraja, výročná správa s otvorenými dátami. Cieľ: 30 adoptovaných úsekov.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="impact">
+  <div class="wrap">
+    <span class="eyebrow" style="color:#A9DDE5">Prečo je to udržateľné</span>
+    <h2>Čo projekt prinesie kraju</h2>
+    <div class="grid g4">
+      <div class="card"><b>30</b><p>adoptovaných úsekov v prvom roku, teda okolo 60 km potokov, o ktoré sa niekto pravidelne stará.</p></div>
+      <div class="card"><b>600+</b><p>detí a mladých ľudí, ktorí si aspoň raz zmerali vodu a vyčistili kus potoka vo svojom okolí.</p></div>
+      <div class="card"><b>1,5 t</b><p>odpadu ročne mimo tokov pri veľmi opatrnom odhade 50 kg na úsek za rok — prvé čistenia bývajú násobne výdatnejšie.</p></div>
+      <div class="card"><b>0 €</b><p>pre školy a obce. Balíček stojí 35 €, celý pilotný rok s 30 úsekmi vyjde na približne 2 500 €.</p></div>
+    </div>
+    <p style="margin-top:24px;opacity:.92">Na Slovensku majú vodné toky dĺžku vyše 60 000 km, ale pravidelne sa sleduje kvalita vody len na necelých 5 000 km tých najväčších (SHMÚ). Malé potoky, ktoré tečú okolo škôl a dedín, nemeria nikto. Adoptuj potok vytvára prvý otvorený prehľad o ich stave — a dáta, ktoré doteraz neexistovali, sú zároveň argumentom pre samosprávy, aby konali.</p>
+  </div>
+</section>
+
+<section class="alt" id="adoptuj">
+  <div class="wrap">
+    <div class="grid g2">
+      <div>
+        <span class="eyebrow">Zapojte sa</span>
+        <h2>Adoptujte úsek</h2>
+        <p class="muted">Vyplňte formulár — otvorí sa vám e-mail s predvyplneným textom, stačí odoslať. Do dvoch dní sa ozvem a dohodneme úsek a termín odovzdania balíčka.</p>
+        <form id="f-adopt">
+          <div class="two">
+            <div><label>Názov školy / zariadenia / oddielu</label><input name="org" required placeholder="napr. ZŠ P. Dobšinského, Rimavská Sobota"></div>
+            <div><label>Kontaktná osoba</label><input name="who" required placeholder="meno a priezvisko"></div>
+          </div>
+          <div class="two">
+            <div><label>E-mail</label><input name="mail" type="email" required></div>
+            <div><label>Úsek z mapy</label><select name="sec" id="sec-select"><option value="">— vyberiem neskôr —</option></select></div>
+          </div>
+          <div><label>Počet detí / členov</label><input name="n" type="number" min="1" placeholder="napr. 20"></div>
+          <button class="btn" type="submit">Odoslať žiadosť o adopciu</button>
+        </form>
+      </div>
+      <div>
+        <span class="eyebrow">Videli ste skládku?</span>
+        <h2>Nahláste ju</h2>
+        <p class="muted">Skládku zapíšem na mapu a odošlem obci a okresnému úradu životného prostredia. Po odstránení ju na mape označím ako vyriešenú — a skupina, ktorá ju nahlásila, získa 15 bodov.</p>
+        <form id="f-dump">
+          <div><label>Kde presne (obec, potok, orientačný bod alebo súradnice)</label><input name="where" required placeholder="napr. Rimava, pod mostom pri Kauflande, Rimavská Sobota"></div>
+          <div><label>Čo tam je</label><textarea name="what" required placeholder="napr. stavebný odpad a pneumatiky, asi 3 m³"></textarea></div>
+          <div><label>Váš e-mail (kvôli spätnej väzbe)</label><input name="mail" type="email"></div>
+          <button class="btn ghost" type="submit">Nahlásiť skládku</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="o-mne">
+  <div class="wrap">
+    <div class="grid g2">
+      <div>
+        <span class="eyebrow">Kto za tým stojí</span>
+        <h2>Milan Krett</h2>
+        <p>Som študent Obchodnej akadémie v Rimavskej Sobote. Rimava tečie pár sto metrov od školy a roky vidím, čo v nej končí — a že to nikto systematicky nerieši. Viem stavať weby, robím ich pre malé firmy v regióne, a tak som spojil dve veci: mapu, ktorú si každý pozrie z mobilu, a školy, ktoré majú deti, čas a chuť niečo urobiť.</p>
+        <p>Projekt prihlasujem do súťaže Tatra Academy 2026 Blue Challenge v kategórii Udržateľnosť. Výhru použijem na prvých 30 štartovacích balíčkov a odmeny do súťaže Potok mesiaca.</p>
+      </div>
+      <div class="card">
+        <h3>Kontakt</h3>
+        <p><b>E-mail:</b> <a href="mailto:milankrett11@gmail.com">milankrett11@gmail.com</a><br><b>Miesto:</b> Rimavská Sobota, Banskobystrický kraj</p>
+        <h3 style="margin-top:18px">Partneri, ktorých oslovujem</h3>
+        <p class="muted" style="margin-bottom:0">Obchodná akadémia Rimavská Sobota · základné školy a CVČ v okresoch Rimavská Sobota, Lučenec, Revúca a Banská Bystrica · mestá a obce na tokoch · Okresné úrady, odbory starostlivosti o životné prostredie · Slovenský vodohospodársky podnik · Banskobystrický samosprávny kraj.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Adoptuj potok · Milan Krett · Rimavská Sobota</span>
+    <span>Mapové podklady © prispievatelia <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span>
+  </div>
+</footer>
+
+<script>
+// Úseky potokov — geometria z OpenStreetMap (skutočný priebeh toku), stav a údaje z pilotu
+const SECTIONS = [
+{"id":"RS-01","name":"Rimava — Rimavská Sobota, centrum","len":1500,"status":"pilot","who":"Obchodná akadémia Rimavská Sobota (pilot)","since":"september 2026","kg":null,"water":null,"dumps":0,"note":"Prvý adoptovaný úsek. Prvé čistenie a meranie v septembri 2026 — hodnoty doplním po akcii.","pts":[[48.38124,20.00898],[48.38076,20.01059],[48.38034,20.01214],[48.37997,20.01353],[48.3796,20.01539],[48.37891,20.01738],[48.3782,20.01884],[48.37736,20.0198],[48.37657,20.02048],[48.37602,20.0212],[48.37553,20.02227],[48.37522,20.02385],[48.37472,20.02542],[48.37443,20.02642]]},
+{"id":"RS-02","name":"Rimava — Rimavská Sobota, sever","len":2000,"status":"free","who":null,"since":null,"kg":null,"water":null,"dumps":0,"note":"Voľný úsek od Tomašovej po centrum. Vhodný pre ZŠ zo severnej časti mesta.","pts":[[48.39548,19.99127],[48.39443,19.9925],[48.39304,19.99337],[48.39175,19.99442],[48.39053,19.99551],[48.38933,19.99618],[48.38809,19.99696],[48.38709,19.99808],[48.38639,19.99973],[48.38553,20.00153],[48.38452,20.0031],[48.38366,20.00452],[48.38283,20.00602],[48.38176,20.00741]]},
+{"id":"RS-03","name":"Rimava — Rimavská Sobota, juh","len":2100,"status":"free","who":null,"since":null,"kg":null,"water":null,"dumps":0,"note":"Voľný úsek pod mestom smerom na Dúžavu. Vhodný pre CVČ alebo skautský oddiel.","pts":[[48.37405,20.02759],[48.37331,20.02876],[48.37254,20.03024],[48.37168,20.03168],[48.37092,20.03326],[48.37009,20.03455],[48.36909,20.0363],[48.36817,20.0381],[48.36715,20.03956],[48.36607,20.04085],[48.36483,20.04203],[48.36372,20.04332],[48.36274,20.04455],[48.36167,20.04533],[48.36074,20.04587]]},
+{"id":"LC-01","name":"Krivánsky potok — Lučenec","len":2300,"status":"plan","who":null,"since":null,"kg":null,"water":null,"dumps":0,"note":"Plánovaný úsek cez Lučenec. Oslovujem ZŠ a CVČ v meste — prvý úsek v okrese Lučenec.","pts":[[48.34332,19.66594],[48.34252,19.66625],[48.34161,19.66665],[48.3406,19.66738],[48.33974,19.66803],[48.33877,19.66884],[48.33779,19.66966],[48.33685,19.67059],[48.33591,19.67176],[48.33511,19.673],[48.33422,19.67411],[48.33333,19.67509],[48.33235,19.67613],[48.33131,19.67731],[48.33028,19.67846],[48.32926,19.67974],[48.32826,19.68102],[48.32826,19.68514]]},
+{"id":"RA-01","name":"Muráň — Revúca","len":2400,"status":"plan","who":null,"since":null,"kg":null,"water":null,"dumps":0,"note":"Plánovaný úsek rieky Muráň cez Revúcu. Prvý úsek v okrese Revúca.","pts":[[48.69179,20.10281],[48.69108,20.10355],[48.69018,20.10429],[48.68926,20.10504],[48.68835,20.10586],[48.68748,20.10671],[48.68655,20.10757],[48.68562,20.10842],[48.68475,20.10929],[48.68391,20.11022],[48.68308,20.11114],[48.68226,20.11209],[48.68139,20.11292],[48.68046,20.11361],[48.67953,20.11414],[48.67857,20.11448],[48.67758,20.11473],[48.67653,20.11485]]},
+{"id":"BB-01","name":"Bystrica — Banská Bystrica","len":2600,"status":"plan","who":null,"since":null,"kg":null,"water":null,"dumps":0,"note":"Plánovaný úsek potoka Bystrica od Uľanky po ústie do Hrona. Prvý úsek v okrese Banská Bystrica.","pts":[[48.75744,19.14087],[48.7563,19.14074],[48.7551,19.14004],[48.75392,19.13969],[48.75272,19.13961],[48.75149,19.13969],[48.75024,19.13995],[48.749,19.14004],[48.74776,19.13996],[48.74652,19.13987],[48.74527,19.13996],[48.74403,19.14019],[48.74278,19.14036],[48.74154,19.14046],[48.7403,19.14042],[48.73905,19.14022],[48.7378,19.14004],[48.73657,19.13971],[48.7356,19.13949]]}
+];
+
+const COLORS = {pilot:'#3E8E52', free:'#E0A100', plan:'#7A8B99'};
+const LABEL  = {pilot:'adoptovaný — pilot', free:'voľný úsek', plan:'plánovaný úsek'};
+const TAGCLS = {pilot:'pilot', free:'free', plan:'plan'};
+
+const map = L.map('map', {scrollWheelZoom:false});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'&copy; OpenStreetMap'}).addTo(map);
+
+const layers = {};
+const bounds = [];
+function fmtKm(m){ return (m/1000).toFixed(1).replace('.',',') + ' km'; }
+function popup(s){
+  const rows = [
+    ['Stav', LABEL[s.status]],
+    ['Dĺžka', fmtKm(s.len)],
+    ['Adoptoval', s.who || '— zatiaľ nikto'],
+    ['Od', s.since || '—'],
+    ['Vyzbieraný odpad', s.kg==null ? 'doplním po prvom čistení' : s.kg + ' kg'],
+    ['Hodnoty vody', s.water || 'doplním po prvom meraní'],
+    ['Nahlásené skládky', s.dumps]
+  ].map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+  const cta = s.status==='pilot' ? '' : `<a href="#adoptuj" onclick="document.getElementById('sec-select').value='${s.id}'">Adoptovať tento úsek →</a>`;
+  return `<b class="t">${s.id} · ${s.name}</b><table>${rows}</table><p style="margin:6px 0">${s.note}</p>${cta}`;
+}
+SECTIONS.forEach(s=>{
+  const line = L.polyline(s.pts, {color:COLORS[s.status], weight:7, opacity:.9, lineCap:'round'}).addTo(map);
+  line.bindPopup(popup(s), {maxWidth:320});
+  layers[s.id] = line;
+  bounds.push(...s.pts);
+  line.on('click', ()=>select(s.id, false));
+});
+map.fitBounds(bounds, {padding:[30,30]});
+
+// zoznam vpravo
+const list = document.getElementById('seclist');
+const sel = document.getElementById('sec-select');
+SECTIONS.forEach(s=>{
+  const d = document.createElement('div');
+  d.className = 'sec-item'; d.id = 'li-'+s.id;
+  d.innerHTML = `<b>${s.id} · ${s.name}</b><small>${fmtKm(s.len)} · ${s.who || 'čaká na adopciu'}</small><br><span class="tag ${TAGCLS[s.status]}">${LABEL[s.status]}</span>`;
+  d.onclick = ()=>select(s.id, true);
+  list.appendChild(d);
+  if(s.status!=='pilot'){ const o=document.createElement('option'); o.value=s.id; o.textContent=`${s.id} — ${s.name}`; sel.appendChild(o); }
+});
+function select(id, fly){
+  document.querySelectorAll('.sec-item').forEach(e=>e.classList.toggle('active', e.id==='li-'+id));
+  const l = layers[id];
+  if(fly){ map.fitBounds(l.getBounds(), {padding:[40,40]}); l.openPopup(); }
+}
+
+// štatistiky z údajov
+const km = SECTIONS.reduce((a,s)=>a+s.len,0);
+document.getElementById('s-sections').textContent = SECTIONS.length;
+document.getElementById('s-km').textContent = fmtKm(km);
+document.getElementById('s-adopted').textContent = SECTIONS.filter(s=>s.status==='pilot').length;
+document.getElementById('s-kg').textContent = SECTIONS.reduce((a,s)=>a+(s.kg||0),0) + ' kg';
+
+// formuláre → e-mail
+function mailto(subject, body){
+  location.href = 'mailto:milankrett11@gmail.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+}
+document.getElementById('f-adopt').addEventListener('submit', e=>{
+  e.preventDefault(); const f = new FormData(e.target);
+  const sec = f.get('sec') ? SECTIONS.find(s=>s.id===f.get('sec')) : null;
+  mailto('Adoptuj potok — žiadosť o adopciu úseku',
+    `Dobrý deň,\n\nmáme záujem adoptovať úsek potoka.\n\nZariadenie: ${f.get('org')}\nKontaktná osoba: ${f.get('who')}\nE-mail: ${f.get('mail')}\nÚsek: ${sec ? sec.id+' — '+sec.name : 'vyberieme neskôr'}\nPočet detí / členov: ${f.get('n') || '—'}\n\nS pozdravom`);
+});
+document.getElementById('f-dump').addEventListener('submit', e=>{
+  e.preventDefault(); const f = new FormData(e.target);
+  mailto('Adoptuj potok — nahlásenie skládky',
+    `Dobrý deň,\n\nnahlasujem skládku.\n\nKde: ${f.get('where')}\nČo: ${f.get('what')}\nKontakt: ${f.get('mail') || '—'}\n\nPrikladám fotku (ak mám).`);
+});
+</script>
+</body>
+</html>
