@@ -36,7 +36,7 @@ section.alt{background:#fff}
 /* header */
 header{position:sticky;top:0;z-index:1000;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .nav{display:flex;align-items:center;justify-content:space-between;height:66px;gap:16px}
-.brand{display:flex;align-items:center;gap:10px;font-weight:800;text-decoration:none;color:var(--ink);font-size:1.1rem}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;text-decoration:none;color:var(--ink);font-size:1.1rem;white-space:nowrap}
 .brand img{width:38px;height:38px}
 .nav ul{list-style:none;margin:0;padding:0;display:flex;gap:20px}
 .nav ul a{text-decoration:none;color:var(--ink);font-weight:600;font-size:.95rem}
@@ -432,6 +432,11 @@ function popup(s){
 SECTIONS.forEach(s=>{
   const line = L.polyline(s.pts, {color:COLORS[s.status], weight:7, opacity:.9, lineCap:'round'}).addTo(map);
   line.bindPopup(popup(s), {maxWidth:320});
+  // bod v strede úseku — aby bol úsek viditeľný aj pri pohľade na celý kraj
+  const mid = s.pts[Math.floor(s.pts.length/2)];
+  const dot = L.circleMarker(mid, {radius:9, color:'#fff', weight:2, fillColor:COLORS[s.status], fillOpacity:1}).addTo(map);
+  dot.bindPopup(popup(s), {maxWidth:320});
+  dot.on('click', ()=>select(s.id, false));
   layers[s.id] = line;
   bounds.push(...s.pts);
   line.on('click', ()=>select(s.id, false));
