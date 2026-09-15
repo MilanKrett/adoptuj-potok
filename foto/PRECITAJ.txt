@@ -1,9 +1,0 @@
-Sem ulož fotky z čistenia Rimavy. Web ich zobrazí automaticky:
-
-  1.jpg  – pred čistením
-  2.jpg  – čistenie brehov
-  3.jpg  – meranie vody prúžkami
-  4.jpg  – vrecia po čistení (výsledok)
-
-Formát JPG, na šírku (4:3 alebo 16:9), ideálne do 500 kB každá.
-Po pridaní: git add . ; git commit -m "Fotky z pilotu" ; git push
